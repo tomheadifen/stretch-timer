@@ -7,6 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Stretches">
 <meta name="theme-color" content="#EEF0EC">
+<script>(function(){var t='light';try{if(localStorage.getItem('stretch-theme')==='dark')t='dark';}catch(e){}document.documentElement.setAttribute('data-theme',t);})();</script>
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>6 Stretches Timer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,6 +37,11 @@ a{color:var(--ink)}
 .num{font-variant-numeric:tabular-nums}
 
 /* Home */
+.herotop{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.iconbtn{color:var(--ink)}
+.ic-sun{display:none}
+:root[data-theme="dark"] .ic-sun{display:block}
+:root[data-theme="dark"] .ic-moon{display:none}
 .hero{display:flex; flex-direction:column; gap:10px; padding-top:8px}
 .hero h1{font-size:68px; font-weight:900}
 .meta{display:flex; flex-wrap:wrap; gap:8px}
@@ -108,7 +114,13 @@ a{color:var(--ink)}
   <!-- HOME -->
   <section id="home" style="display:flex;flex-direction:column;gap:20px">
     <div class="hero">
-      <div class="eyebrow">Guided flexibility routine</div>
+      <div class="herotop">
+        <div class="eyebrow">Guided flexibility routine</div>
+        <button class="iconbtn themebtn" type="button" aria-label="Switch to dark theme">
+          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>
+          <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+        </button>
+      </div>
       <h1 class="disp">6 Stretches</h1>
       <div class="meta">
         <span class="chip num" id="totalChip">~10 min</span>
@@ -138,6 +150,10 @@ a{color:var(--ink)}
         <div class="bar"><i id="barFill"></i></div>
         <div class="row num"><span id="exCount">Stretch 1 of 6</span><span id="timeLeft">10:30 left</span></div>
       </div>
+      <button class="iconbtn themebtn" type="button" aria-label="Switch to dark theme">
+        <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>
+        <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      </button>
       <button class="iconbtn" id="soundBtn" type="button" aria-label="Mute sound" aria-pressed="true">
         <svg id="soundOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg>
         <svg id="soundOff" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
@@ -278,6 +294,22 @@ a{color:var(--ink)}
     if(!soundOn){ try{ speechSynthesis.cancel(); }catch(e){} }
   });
   renderSound();
+
+  // Theme toggle (defaults to light)
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme', t);
+    try{ localStorage.setItem('stretch-theme', t); }catch(e){}
+    var m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', t==='dark'?'#0F1715':'#EEF0EC');
+    Array.prototype.forEach.call(document.querySelectorAll('.themebtn'), function(b){
+      b.setAttribute('aria-label', t==='dark'?'Switch to light theme':'Switch to dark theme');
+    });
+  }
+  applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light');
+  Array.prototype.forEach.call(document.querySelectorAll('.themebtn'), function(b){
+    b.addEventListener('click', function(){
+      applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+    });
+  });
 
   // Wake lock
   var lock=null;
