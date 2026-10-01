@@ -284,7 +284,7 @@ a{color:var(--ink)}
   }
   function buzz(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
   function renderSound(){
-    $('soundOn').hidden=!soundOn; $('soundOff').hidden=soundOn;
+    $('soundOn').toggleAttribute('hidden', !soundOn); $('soundOff').toggleAttribute('hidden', soundOn);
     $('soundBtn').setAttribute('aria-pressed', String(soundOn));
     $('soundBtn').setAttribute('aria-label', soundOn?'Mute sound':'Turn sound on');
   }
@@ -388,7 +388,7 @@ a{color:var(--ink)}
 
   function setRunning(r){
     running=r;
-    $('icPause').hidden=!r; $('icPlay').hidden=r;
+    $('icPause').toggleAttribute('hidden', !r); $('icPlay').toggleAttribute('hidden', r);
     $('pauseLabel').textContent = r?'Pause':'Resume';
     $('player').classList.toggle('paused', !r);
     if(r){ endAt=Date.now()+remaining; wake(); if(!timer) timer=setInterval(tick,200); }
