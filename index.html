@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Stretches">
 <meta name="theme-color" content="#EEF0EC">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>(function(){var t='light';try{if(localStorage.getItem('stretch-theme')==='dark')t='dark';}catch(e){}document.documentElement.setAttribute('data-theme',t);})();</script>
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>6 Stretches Timer</title>
@@ -424,6 +427,11 @@ a{color:var(--ink)}
     if(e.target && /INPUT|TEXTAREA|BUTTON/.test(e.target.tagName)) return;
     if(e.code==='Space'){ e.preventDefault(); setRunning(!running); }
   });
+
+  // PWA: offline support
+  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  }
 })();
 </script>
 
