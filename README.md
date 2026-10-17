@@ -29,7 +29,6 @@ There's no rest when alternating sides, since the other side is resting.
 - **Screen stays on** during the routine where the browser supports it.
 - **Light and dark themes**, remembered between visits.
 - **Installable and offline:** add it to your home screen and it works without a connection.
-- **Update prompt:** when a new version is published, it downloads in the background and a banner offers **Update**. The banner waits until you're not mid-routine.
 
 ## Install on your phone
 
@@ -45,7 +44,7 @@ A single static page with no build step or dependencies.
 | File | What it does |
 |------|--------------|
 | `index.html` | The whole app: markup, styles, stretch data and timer logic |
-| `sw.js` | Service worker: offline use and the update prompt (serves the saved copy of each version) |
+| `sw.js` | Service worker for offline use (app files network-first, fonts cache-first) |
 | `manifest.webmanifest` | Name, colours and icons for installing to the home screen |
 | `icons/` | App icons and favicon |
 | `.nojekyll` | Tells GitHub Pages to serve files as-is |
@@ -76,12 +75,4 @@ The total time and step sequence update automatically.
 
 ### Deploy
 
-Pushing to the default branch publishes it through GitHub Pages.
-
-**Every release, bump `VERSION` in `sw.js`** (e.g. `v3` → `v4`). The app runs from its saved copy, so this is what tells installed copies there's something new:
-
-1. You push with a new `VERSION`.
-2. Next time someone opens the app (or brings it back to the foreground), it downloads the new files in the background.
-3. A "A new version is ready" banner appears with **Update**. Tapping it reloads into the new version; dismissing it keeps the current one until the next launch.
-
-If you push without bumping `VERSION`, installed copies keep running the old files. If you add a new file the app needs, also add it to the `SHELL` list in `sw.js`.
+Pushing to the default branch publishes it through GitHub Pages. If you change which files the app needs, bump `CACHE` in `sw.js` (e.g. `stretches-v2`) so installed copies pick up the new list.

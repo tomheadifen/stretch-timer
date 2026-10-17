@@ -112,17 +112,8 @@ a{color:var(--ink)}
 .howto li{margin:4px 0}
 .howto .shr{display:inline-block; width:18px; height:18px; vertical-align:-3px}
 
-/* Update banner */
-.toast{position:fixed; left:16px; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px)); max-width:488px; margin:0 auto; background:var(--ink); color:var(--bg); border-radius:16px; padding:8px 6px 8px 16px; display:flex; align-items:center; gap:8px; box-shadow:0 10px 30px rgba(0,0,0,.22); z-index:10; animation:toastIn .3s ease-out}
-.toast span{flex:1; min-width:0; font-size:15px; font-weight:600}
-.tbtn{appearance:none; border:0; background:var(--accent); color:var(--accent-ink); border-radius:10px; padding:0 16px; min-height:44px; font-weight:700; flex:none}
-.tclose{appearance:none; border:0; background:transparent; color:inherit; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; opacity:.75; flex:none}
-.tclose svg{width:20px; height:20px}
-body:has(#updateBar:not([hidden])) .wrap{padding-bottom:100px}
-@keyframes toastIn{from{transform:translateY(16px); opacity:0}to{transform:none; opacity:1}}
-
 @media (max-width:380px){ .hero h1{font-size:56px} .exname{font-size:42px} .item{grid-template-columns:32px 76px minmax(0,1fr)} .item .fig svg{width:72px} }
-@media (prefers-reduced-motion:reduce){ .bar i,.ring .prog{transition:none} .toast{animation:none} }
+@media (prefers-reduced-motion:reduce){ .bar i,.ring .prog{transition:none} }
 </style>
 </head>
 <body>
@@ -228,15 +219,6 @@ body:has(#updateBar:not([hidden])) .wrap{padding-bottom:100px}
     <button class="start" id="againBtn" type="button"><span class="disp">Go again</span><small>From the top</small></button>
     <button class="ghost" id="homeBtn" type="button">Back to the list</button>
   </section>
-</div>
-
-<!-- UPDATE BANNER: shown when a new version has downloaded (never during a routine) -->
-<div class="toast" id="updateBar" role="status" hidden>
-  <span>A new version is ready</span>
-  <button class="tbtn" id="updateBtn" type="button">Update</button>
-  <button class="tclose" id="updateLater" type="button" aria-label="Not now">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-  </button>
 </div>
 
 <script>
@@ -432,15 +414,14 @@ body:has(#updateBar:not([hidden])) .wrap{padding-bottom:100px}
   }
 
   function begin(){
-    $('updateBar').hidden = true;
     initAudio(); show('player'); enterStep(0); setRunning(true);
   }
   function finish(){
-    setRunning(false); unwake(); show('done'); showUpdate();
+    setRunning(false); unwake(); show('done');
     beep(880,180,.3); setTimeout(function(){beep(1175,320,.3);},200); buzz([200,100,200,100,300]);
     say('All done. Nice work.');
   }
-  function exit(){ setRunning(false); unwake(); try{ speechSynthesis.cancel(); }catch(e){} show('home'); showUpdate(); }
+  function exit(){ setRunning(false); unwake(); try{ speechSynthesis.cancel(); }catch(e){} show('home'); }
 
   $('startBtn').addEventListener('click', begin);
   $('againBtn').addEventListener('click', begin);
@@ -462,45 +443,9 @@ body:has(#updateBar:not([hidden])) .wrap{padding-bottom:100px}
     if(e.code==='Space'){ e.preventDefault(); setRunning(!running); }
   });
 
-  // PWA: offline support + update prompt.
-  // A new version downloads in the background and waits; the banner lets you switch to it.
-  // The banner is held back during a routine and appears once you're back on the list or done screen.
-  var waitingSW = null, updateDismissed = false, reloading = false;
-  function showUpdate(){
-    if(!waitingSW || updateDismissed || !$('player').hidden) return;
-    $('updateBar').hidden = false;
-  }
-  function setWaiting(w){ waitingSW = w; showUpdate(); }
-  $('updateBtn').addEventListener('click', function(){
-    if(!waitingSW) return;
-    $('updateBtn').textContent = 'Updating…'; $('updateBtn').disabled = true;
-    reloading = 'requested';
-    waitingSW.postMessage({type:'SKIP_WAITING'});
-  });
-  $('updateLater').addEventListener('click', function(){ updateDismissed = true; $('updateBar').hidden = true; });
-
+  // PWA: offline support
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
-    navigator.serviceWorker.addEventListener('controllerchange', function(){
-      // Only reload when the user tapped Update (not on the very first install)
-      if(reloading !== 'requested') return;
-      reloading = true; location.reload();
-    });
-    window.addEventListener('load', function(){
-      navigator.serviceWorker.register('sw.js').then(function(reg){
-        var hadController = !!navigator.serviceWorker.controller;
-        if(reg.waiting && hadController) setWaiting(reg.waiting);
-        reg.addEventListener('updatefound', function(){
-          var w = reg.installing; if(!w) return;
-          w.addEventListener('statechange', function(){
-            if(w.state === 'installed' && navigator.serviceWorker.controller) setWaiting(w);
-          });
-        });
-        // Check for a new version whenever the app comes back to the foreground
-        document.addEventListener('visibilitychange', function(){
-          if(document.visibilityState === 'visible') reg.update().catch(function(){});
-        });
-      }).catch(function(){});
-    });
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
   }
 
   // Download (install) button — hidden once the app is installed and running from the home screen
