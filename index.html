@@ -104,6 +104,13 @@ a{color:var(--ink)}
 .done h2{font-size:72px; font-weight:900}
 .done p{margin:0; font-size:17px; color:var(--muted)}
 .ghost{appearance:none; border:1.5px solid var(--line); background:transparent; border-radius:14px; min-height:52px; font-weight:600}
+.dl{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:-8px; font-size:16px}
+.dl svg{width:20px; height:20px}
+.howto{background:var(--surface); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; margin-top:-8px}
+.howto > b{font-family:var(--display); font-weight:800; font-size:24px; text-transform:uppercase; line-height:1}
+.howto ol{margin:0; padding-left:20px; font-size:15px}
+.howto li{margin:4px 0}
+.howto .shr{display:inline-block; width:18px; height:18px; vertical-align:-3px}
 
 @media (max-width:380px){ .hero h1{font-size:56px} .exname{font-size:42px} .item{grid-template-columns:32px 76px minmax(0,1fr)} .item .fig svg{width:72px} }
 @media (prefers-reduced-motion:reduce){ .bar i,.ring .prog{transition:none} }
@@ -129,13 +136,21 @@ a{color:var(--ink)}
         <span class="chip num" id="totalChip">~10 min</span>
         <span class="chip">30 s holds</span>
         <span class="chip">2 sets</span>
-        <span class="chip">5 days a week</span>
       </div>
     </div>
     <button class="start" id="startBtn" type="button">
       <span class="disp">Start routine</span>
       <small>Sound on</small>
     </button>
+    <button class="ghost dl" id="installBtn" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      Download app
+    </button>
+    <div class="howto" id="howto" hidden>
+      <b>Add to your home screen</b>
+      <ol id="howtoSteps"></ol>
+      <button class="ghost" id="howtoClose" type="button">Got it</button>
+    </div>
     <ol class="list" id="list"></ol>
     <div class="foot">
       <div>15 s rest between sets. No rest when alternating sides. Each stretch starts with 10 s to get into position.</div>
@@ -432,6 +447,29 @@ a{color:var(--ink)}
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
   }
+
+  // Download (install) button — hidden once the app is installed and running from the home screen
+  var installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  var installEvt = null;
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var SHARE = '<svg class="shr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Share"><path d="M12 3v12M8 7l4-4 4 4M6 11H5v10h14V11h-1"/></svg>';
+  if(!installed) $('installBtn').hidden = false;
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installEvt = e; });
+  window.addEventListener('appinstalled', function(){ $('installBtn').hidden = true; $('howto').hidden = true; });
+  $('installBtn').addEventListener('click', function(){
+    if(installEvt){
+      installEvt.prompt();
+      installEvt.userChoice.then(function(c){ if(c && c.outcome === 'accepted') $('installBtn').hidden = true; installEvt = null; });
+      return;
+    }
+    var steps = isIOS
+      ? ['Tap the Share button '+SHARE+' in Safari’s toolbar.', 'Scroll down and tap <b>Add to Home Screen</b>.', 'Tap <b>Add</b>. Open Stretches from your home screen.']
+      : ['Open your browser’s menu (⋮ or ⋯).', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Open Stretches from your home screen.'];
+    $('howtoSteps').innerHTML = steps.map(function(s){ return '<li>'+s+'</li>'; }).join('');
+    $('howto').hidden = false; $('installBtn').hidden = true;
+  });
+  $('howtoClose').addEventListener('click', function(){ $('howto').hidden = true; if(!installed) $('installBtn').hidden = false; });
 })();
 </script>
 
