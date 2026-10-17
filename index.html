@@ -113,6 +113,9 @@ a.start{text-decoration:none}
 .howto ol{margin:0; padding-left:20px; font-size:15px}
 .howto li{margin:4px 0}
 .howto ol:has(> li:only-child){list-style:none; padding-left:0}
+.howto > b{display:flex; align-items:center; gap:10px}
+.spin{flex:none; width:20px; height:20px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--accent); animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .howto .shr{display:inline-block; width:18px; height:18px; vertical-align:-3px}
 
 /* Landing (browser only; skipped when opened as the installed app) */
@@ -126,7 +129,7 @@ a.start{text-decoration:none}
 .lbtns .ghost{font-size:17px; min-height:60px}
 
 @media (max-width:380px){ .hero h1,.landing h1{font-size:56px} .exname{font-size:42px} .item{grid-template-columns:32px 76px minmax(0,1fr)} .item .fig svg{width:72px} }
-@media (prefers-reduced-motion:reduce){ .bar i,.ring .prog{transition:none} }
+@media (prefers-reduced-motion:reduce){ .bar i,.ring .prog{transition:none} .spin{animation-duration:2s} }
 </style>
 </head>
 <body>
@@ -507,7 +510,6 @@ a.start{text-decoration:none}
     : ['Open your browser’s menu (⋮ or ⋯).', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Open Stretches from your home screen.'];
   function list(items){ return items.map(function(s){ return '<li>'+s+'</li>'; }).join(''); }
   var appMarked = false;
-  // state: 'installing' (just accepted), 'installed' (finished), 'already' (installed on an earlier visit)
   // After installing, an "Open app" link appears. It must open in a new tab
   // (target=_blank): Chrome on Android then hands the address to Android, which
   // opens the installed app over the browser. A same-tab link would stay in Chrome.
@@ -524,25 +526,35 @@ a.start{text-decoration:none}
       a.querySelector('.opensub').textContent = sub || '';
     });
   }
-  // state: 'installing' (just accepted), 'installed' (finished), 'already' (installed on an earlier visit)
+  // state: 'installing' (accepted, or Chrome reports installed but the app isn't ready yet),
+  // 'installed' (ready to open), 'already' (installed on an earlier visit).
+  // Chrome fires 'appinstalled' as soon as you accept, well before Android can open the
+  // app, so we stay on an animated "Installing…" until whenAppReady() confirms it.
+  var installState = null;
   function markInstalled(state){
-    appMarked = true;
+    if(installState === 'installed' || installState === 'already') return;   // never go backwards
+    if(state === 'installing' && installState === 'installing') return;
+    installState = state; appMarked = true;
     $('landDl').hidden = true; $('installBtn').hidden = true;
     var msg = {
-      installing: ['Installing Stretches…', ['This takes a few seconds.']],
+      installing: ['Installing…', ['Setting up Stretches on your phone. This takes a few seconds.']],
       installed:  ['Installed', ['You’ll also find Stretches on your home screen or in your app drawer.']],
       already:    ['Already installed', ['Open it below, or from your home screen or app drawer.']]
     }[state];
-    if(!msg) return;
     [['landHowto','landSteps'], ['howto','howtoSteps']].forEach(function(ids){
-      $(ids[0]).querySelector('b').textContent = msg[0];
+      var title = $(ids[0]).querySelector('b');
+      title.innerHTML = (state === 'installing' ? '<i class="spin" aria-hidden="true"></i>' : '') + msg[0];
+      $(ids[0]).setAttribute('aria-busy', String(state === 'installing'));
       $(ids[1]).innerHTML = list(msg[1]);
     });
     $('landHowto').hidden = false;
     if(!$('home').hidden) $('howto').hidden = false;   // installed from the list page's button
-    if(state === 'already'){ setOpen('ready'); return; }
-    setOpen('waiting', 'Getting ready…');
-    if(state === 'installed') whenAppReady().then(function(){ setOpen('ready'); });
+    if(state === 'installing'){
+      setOpen(null);
+      whenAppReady().then(function(){ markInstalled('installed'); });
+      return;
+    }
+    setOpen('ready');
   }
   // Ask Chrome once a second whether the app is installed on the device yet
   // (on Android this is true once the app has actually been set up), and enable
@@ -588,14 +600,13 @@ a.start{text-decoration:none}
       if(!evt){ onSteps(); return; }
       installEvt = null;
       evt.prompt();
-      evt.userChoice.then(function(c){ if(c && c.outcome === 'accepted' && !appMarkedDone) markInstalled('installing'); }).catch(function(){});
+      evt.userChoice.then(function(c){ if(c && c.outcome === 'accepted') markInstalled('installing'); }).catch(function(){});
     });
   }
-  var appMarkedDone = false;
 
   if(!installed) $('installBtn').hidden = false;
   window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installEvt = e; });
-  window.addEventListener('appinstalled', function(){ appMarkedDone = true; markInstalled('installed'); });
+  window.addEventListener('appinstalled', function(){ markInstalled('installing'); });
   // Installed on an earlier visit? (Chrome on Android/desktop can tell us)
   if(!installed && navigator.getInstalledRelatedApps){
     navigator.getInstalledRelatedApps().then(function(apps){
