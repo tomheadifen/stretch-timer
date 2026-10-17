@@ -1,7 +1,7 @@
 {
   "name": "6 Stretches",
   "short_name": "Stretches",
-  "description": "Guided timer for a 6-stretch flexibility routine.",
+  "description": "A guided 11-minute flexibility routine. Six stretches with a countdown timer, voice cues and form tips. Works offline.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -9,9 +9,19 @@
   "orientation": "portrait",
   "background_color": "#EEF0EC",
   "theme_color": "#EEF0EC",
+  "categories": ["health", "fitness", "lifestyle"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "screenshots/list.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "The six stretches with form cues" },
+    { "src": "screenshots/hold.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Countdown timer during a hold" },
+    { "src": "screenshots/rest-dark.png", "sizes": "780x1688", "type": "image/png", "form_factor": "narrow", "label": "Rest between sets, dark theme" },
+    { "src": "screenshots/wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Guided timer on desktop" }
+  ],
+  "related_applications": [
+    { "platform": "webapp", "url": "https://tomheadifen.github.io/stretch-timer/manifest.webmanifest" }
   ]
 }

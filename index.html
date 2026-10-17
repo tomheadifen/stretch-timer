@@ -501,27 +501,55 @@ a{color:var(--ink)}
     : ['Open your browser’s menu (⋮ or ⋯).', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Open Stretches from your home screen.'];
   function list(items){ return items.map(function(s){ return '<li>'+s+'</li>'; }).join(''); }
   var appMarked = false;
-  function markInstalled(){
+  // state: 'installing' (just accepted), 'installed' (finished), 'already' (installed on an earlier visit)
+  function markInstalled(state){
     appMarked = true;
     $('landDl').hidden = true; $('installBtn').hidden = true; $('howto').hidden = true;
-    $('landSteps').innerHTML = list(['Stretches is on your home screen.', 'Open it from there, or keep going here.']);
-    $('landHowto').querySelector('b').textContent = 'Installed';
+    var msg = {
+      installing: ['Installing Stretches…', ['It’ll appear on your home screen in a moment.', 'Open it from there, or keep going here.']],
+      installed:  ['Installed', ['Stretches is on your home screen.', 'Open it from there, or keep going here.']],
+      already:    ['Already installed', ['Stretches is on your home screen.', 'Open it from there, or keep going here.']]
+    }[state] || null;
+    if(!msg) return;
+    $('landHowto').querySelector('b').textContent = msg[0];
+    $('landSteps').innerHTML = list(msg[1]);
     $('landHowto').hidden = false;
   }
-  // Offers the browser's own install prompt when there is one; otherwise shows the steps.
-  function install(onSteps){
-    if(installEvt){
-      var e = installEvt; installEvt = null;
-      e.prompt();
-      e.userChoice.then(function(c){ if(c && c.outcome === 'accepted') markInstalled(); }).catch(function(){});
-      return;
-    }
-    onSteps();
+  // The browser's install prompt can arrive a moment after the page loads,
+  // so wait briefly for it before falling back to written steps.
+  function whenPromptReady(ms){
+    return new Promise(function(res){
+      if(installEvt) return res(installEvt);
+      var done = false;
+      function got(){ if(done) return; done = true; res(installEvt); }
+      window.addEventListener('beforeinstallprompt', function(){ setTimeout(got, 0); }, {once:true});
+      setTimeout(got, ms);
+    });
   }
+  // Offers the browser's own install prompt when there is one; otherwise shows the steps.
+  function install(btn, onSteps){
+    var label = btn.querySelector('.disp');
+    var wait = !installEvt && !isIOS;
+    if(wait && label){ label.textContent = 'Preparing…'; btn.disabled = true; }
+    whenPromptReady(wait ? 1500 : 0).then(function(evt){
+      if(label){ label.textContent = 'Download app'; btn.disabled = false; }
+      if(!evt){ onSteps(); return; }
+      installEvt = null;
+      evt.prompt();
+      evt.userChoice.then(function(c){ if(c && c.outcome === 'accepted' && !appMarkedDone) markInstalled('installing'); }).catch(function(){});
+    });
+  }
+  var appMarkedDone = false;
 
   if(!installed) $('installBtn').hidden = false;
   window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installEvt = e; });
-  window.addEventListener('appinstalled', markInstalled);
+  window.addEventListener('appinstalled', function(){ appMarkedDone = true; markInstalled('installed'); });
+  // Installed on an earlier visit? (Chrome on Android/desktop can tell us)
+  if(!installed && navigator.getInstalledRelatedApps){
+    navigator.getInstalledRelatedApps().then(function(apps){
+      if(apps && apps.length) markInstalled('already');
+    }).catch(function(){});
+  }
 
   function renderLanding(withSteps){
     if(appMarked) return;   // keep the "Installed" message
@@ -547,10 +575,10 @@ a{color:var(--ink)}
 
   $('landWeb').addEventListener('click', function(){ history.pushState({v:'home'}, ''); show('home'); });
   $('landDl').addEventListener('click', function(){
-    install(function(){ history.pushState({v:'steps'}, ''); renderLanding(true); });
+    install($('landDl'), function(){ history.pushState({v:'steps'}, ''); renderLanding(true); });
   });
   $('installBtn').addEventListener('click', function(){
-    install(function(){
+    install($('installBtn'), function(){
       $('howtoSteps').innerHTML = list(HOWTO);
       $('howto').hidden = false; $('installBtn').hidden = true;
     });

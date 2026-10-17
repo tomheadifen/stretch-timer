@@ -48,6 +48,7 @@ A single static page with no build step or dependencies.
 | `sw.js` | Service worker for offline use (app files network-first, fonts cache-first) |
 | `manifest.webmanifest` | Name, colours and icons for installing to the home screen |
 | `icons/` | App icons and favicon |
+| `screenshots/` | Shown in Chrome's install sheet (listed in the manifest). Retake them if the design changes. |
 | `.nojekyll` | Tells GitHub Pages to serve files as-is |
 
 Settings (sound, theme) are kept in the browser's `localStorage`. Nothing is sent anywhere.
