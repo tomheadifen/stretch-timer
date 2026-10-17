@@ -1,7 +1,7 @@
 // Service worker: makes the app installable and usable offline.
 // App files: network first (updates show up as soon as you're online),
 // falling back to the saved copy when offline. Fonts: saved copy first.
-const CACHE = "stretches-v1";
+const CACHE = "stretches-v2";
 const SHELL = [
   "./",
   "./index.html",
