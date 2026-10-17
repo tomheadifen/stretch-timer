@@ -511,7 +511,8 @@ a.start{text-decoration:none}
   // After installing, an "Open app" link appears. It must open in a new tab
   // (target=_blank): Chrome on Android then hands the address to Android, which
   // opens the installed app over the browser. A same-tab link would stay in Chrome.
-  // Android needs a few seconds after install before the app can be opened.
+  // Android needs a few seconds after install before the app can be opened
+  // (see whenAppReady below; OPEN_DELAY is the fallback wait).
   var OPEN_DELAY = 10000;
   var START_URL = new URL('./', location.href).href;
   Array.prototype.forEach.call(document.querySelectorAll('.openapp'), function(a){ a.href = START_URL; });
@@ -541,7 +542,30 @@ a.start{text-decoration:none}
     if(!$('home').hidden) $('howto').hidden = false;   // installed from the list page's button
     if(state === 'already'){ setOpen('ready'); return; }
     setOpen('waiting', 'Getting ready…');
-    if(state === 'installed') setTimeout(function(){ setOpen('ready'); }, OPEN_DELAY);
+    if(state === 'installed') whenAppReady().then(function(){ setOpen('ready'); });
+  }
+  // Ask Chrome once a second whether the app is installed on the device yet
+  // (on Android this is true once the app has actually been set up), and enable
+  // Open app as soon as it is. Browsers without the check fall back to a fixed wait;
+  // with the check, we give up waiting after MAX_WAIT and enable it anyway.
+  var MAX_WAIT = 20000, POLL = 1000;
+  var readyPromise = null;
+  function whenAppReady(){
+    if(readyPromise) return readyPromise;
+    readyPromise = new Promise(function(res){
+      if(!navigator.getInstalledRelatedApps){ setTimeout(res, OPEN_DELAY); return; }
+      var start = Date.now(), done = false;
+      function finish(){ if(!done){ done = true; res(); } }
+      (function check(){
+        if(done) return;
+        navigator.getInstalledRelatedApps().then(function(apps){
+          if(apps && apps.length) finish();
+          else if(Date.now() - start >= MAX_WAIT) finish();
+          else setTimeout(check, POLL);
+        }).catch(function(){ setTimeout(finish, Math.max(0, OPEN_DELAY - (Date.now() - start))); });
+      })();
+    });
+    return readyPromise;
   }
   // The browser's install prompt can arrive a moment after the page loads,
   // so wait briefly for it before falling back to written steps.
