@@ -112,7 +112,17 @@ a{color:var(--ink)}
 .howto li{margin:4px 0}
 .howto .shr{display:inline-block; width:18px; height:18px; vertical-align:-3px}
 
-@media (max-width:380px){ .hero h1{font-size:56px} .exname{font-size:42px} .item{grid-template-columns:32px 76px minmax(0,1fr)} .item .fig svg{width:72px} }
+/* Landing (browser only; skipped when opened as the installed app) */
+.landing{flex:1; display:flex; flex-direction:column; justify-content:center; gap:32px; padding-block:12px}
+.lhead{display:flex; flex-direction:column; gap:10px}
+.appicon{width:88px; height:88px; border-radius:22px; margin-bottom:8px; box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.landing h1{font-size:68px; font-weight:900}
+.lead{margin:0; font-size:17px; color:var(--muted); max-width:32ch}
+.lbtns{display:flex; flex-direction:column; gap:12px}
+.lbtns .howto{margin-top:0}
+.lbtns .ghost{font-size:17px; min-height:60px}
+
+@media (max-width:380px){ .hero h1,.landing h1{font-size:56px} .exname{font-size:42px} .item{grid-template-columns:32px 76px minmax(0,1fr)} .item .fig svg{width:72px} }
 @media (prefers-reduced-motion:reduce){ .bar i,.ring .prog{transition:none} }
 </style>
 </head>
@@ -121,8 +131,29 @@ a{color:var(--ink)}
 
 <div class="wrap" id="app">
 
+  <!-- LANDING: browser only -->
+  <section id="landing" class="landing">
+    <div class="lhead">
+      <img class="appicon" src="icons/icon-192.png" alt="" width="88" height="88">
+      <div class="eyebrow">Guided flexibility routine</div>
+      <h1 class="disp">6 Stretches</h1>
+      <p class="lead" id="lead">Six stretches with a timer and voice cues. Just follow along.</p>
+    </div>
+    <div class="lbtns">
+      <button class="start" id="landDl" type="button">
+        <span class="disp">Download app</span>
+        <small>Works offline</small>
+      </button>
+      <div class="howto" id="landHowto" hidden>
+        <b>Add to your home screen</b>
+        <ol id="landSteps"></ol>
+      </div>
+      <button class="ghost" id="landWeb" type="button">Use in browser</button>
+    </div>
+  </section>
+
   <!-- HOME -->
-  <section id="home" style="display:flex;flex-direction:column;gap:20px">
+  <section id="home" hidden style="display:flex;flex-direction:column;gap:20px">
     <div class="hero">
       <div class="herotop">
         <div class="eyebrow">Guided flexibility routine</div>
@@ -339,7 +370,7 @@ a{color:var(--ink)}
   var idx=0, remaining=0, endAt=0, running=false, timer=null, lastWhole=null;
   var C = 628.32;
 
-  function show(view){ ['home','player','done'].forEach(function(v){ $(v).hidden = v!==view; }); window.scrollTo(0,0); }
+  function show(view){ ['landing','home','player','done'].forEach(function(v){ $(v).hidden = v!==view; }); window.scrollTo(0,0); }
 
   function nextText(i){
     var n = steps[i+1];
@@ -448,26 +479,53 @@ a{color:var(--ink)}
     window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
   }
 
-  // Download (install) button — hidden once the app is installed and running from the home screen
+  // Installed vs browser. Opened from the home screen → straight to the list.
+  // In a browser → landing page with "Download app" and "Use in browser".
   var installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  show(installed ? 'home' : 'landing');
+  $('lead').textContent = 'Six stretches in about '+Math.round(TOTAL/60)+' minutes, with a timer and voice cues. Just follow along.';
+
   var installEvt = null;
   var ua = navigator.userAgent || '';
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var SHARE = '<svg class="shr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Share"><path d="M12 3v12M8 7l4-4 4 4M6 11H5v10h14V11h-1"/></svg>';
-  if(!installed) $('installBtn').hidden = false;
-  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installEvt = e; });
-  window.addEventListener('appinstalled', function(){ $('installBtn').hidden = true; $('howto').hidden = true; });
-  $('installBtn').addEventListener('click', function(){
+  var HOWTO = isIOS
+    ? ['Tap the Share button '+SHARE+' in Safari’s toolbar.', 'Scroll down and tap <b>Add to Home Screen</b>.', 'Tap <b>Add</b>. Open Stretches from your home screen.']
+    : ['Open your browser’s menu (⋮ or ⋯).', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Open Stretches from your home screen.'];
+  function list(items){ return items.map(function(s){ return '<li>'+s+'</li>'; }).join(''); }
+  function markInstalled(){
+    $('landDl').hidden = true; $('installBtn').hidden = true; $('howto').hidden = true;
+    $('landSteps').innerHTML = list(['Stretches is on your home screen.', 'Open it from there, or keep going here.']);
+    $('landHowto').querySelector('b').textContent = 'Installed';
+    $('landHowto').hidden = false;
+  }
+  // Offers the browser's own install prompt when there is one; otherwise shows the steps.
+  function install(onSteps){
     if(installEvt){
-      installEvt.prompt();
-      installEvt.userChoice.then(function(c){ if(c && c.outcome === 'accepted') $('installBtn').hidden = true; installEvt = null; });
+      var e = installEvt; installEvt = null;
+      e.prompt();
+      e.userChoice.then(function(c){ if(c && c.outcome === 'accepted') markInstalled(); }).catch(function(){});
       return;
     }
-    var steps = isIOS
-      ? ['Tap the Share button '+SHARE+' in Safari’s toolbar.', 'Scroll down and tap <b>Add to Home Screen</b>.', 'Tap <b>Add</b>. Open Stretches from your home screen.']
-      : ['Open your browser’s menu (⋮ or ⋯).', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Open Stretches from your home screen.'];
-    $('howtoSteps').innerHTML = steps.map(function(s){ return '<li>'+s+'</li>'; }).join('');
-    $('howto').hidden = false; $('installBtn').hidden = true;
+    onSteps();
+  }
+
+  if(!installed) $('installBtn').hidden = false;
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installEvt = e; });
+  window.addEventListener('appinstalled', markInstalled);
+
+  $('landWeb').addEventListener('click', function(){ show('home'); });
+  $('landDl').addEventListener('click', function(){
+    install(function(){
+      $('landSteps').innerHTML = list(HOWTO);
+      $('landHowto').hidden = false; $('landDl').hidden = true;
+    });
+  });
+  $('installBtn').addEventListener('click', function(){
+    install(function(){
+      $('howtoSteps').innerHTML = list(HOWTO);
+      $('howto').hidden = false; $('installBtn').hidden = true;
+    });
   });
   $('howtoClose').addEventListener('click', function(){ $('howto').hidden = true; if(!installed) $('installBtn').hidden = false; });
 })();

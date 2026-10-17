@@ -29,6 +29,7 @@ There's no rest when alternating sides, since the other side is resting.
 - **Screen stays on** during the routine where the browser supports it.
 - **Light and dark themes**, remembered between visits.
 - **Installable and offline:** add it to your home screen and it works without a connection.
+- **Landing page in the browser:** choose **Download app** or **Use in browser**. Opened from the home screen, the app skips this and goes straight to the routine.
 
 ## Install on your phone
 
