@@ -52,6 +52,9 @@ a{color:var(--ink)}
 .start{appearance:none; border:0; background:var(--accent); color:var(--accent-ink); border-radius:16px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px}
 .start .disp{font-size:34px; font-weight:800}
 .start small{font-size:15px; font-weight:600; opacity:.9}
+a.start{text-decoration:none}
+.openapp.waiting{opacity:.55; pointer-events:none}
+.howto .start .disp{font-size:28px}
 .list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
 .item{display:grid; grid-template-columns:40px 92px minmax(0,1fr); gap:12px; align-items:start; background:var(--surface); border-radius:14px; padding:10px 14px 10px 10px}
 .item .n{font-family:var(--display); font-weight:900; font-size:32px; color:var(--accent); text-align:center; padding-top:14px}
@@ -109,6 +112,7 @@ a{color:var(--ink)}
 .howto > b{font-family:var(--display); font-weight:800; font-size:24px; text-transform:uppercase; line-height:1}
 .howto ol{margin:0; padding-left:20px; font-size:15px}
 .howto li{margin:4px 0}
+.howto ol:has(> li:only-child){list-style:none; padding-left:0}
 .howto .shr{display:inline-block; width:18px; height:18px; vertical-align:-3px}
 
 /* Landing (browser only; skipped when opened as the installed app) */
@@ -146,6 +150,7 @@ a{color:var(--ink)}
       <div class="howto" id="landHowto" hidden>
         <b>Add to your home screen</b>
         <ol id="landSteps"></ol>
+        <a class="start openapp" hidden target="_blank" rel="noopener"><span class="disp">Open app</span><small class="opensub"></small></a>
       </div>
       <button class="ghost" id="landWeb" type="button">Use in browser</button>
     </div>
@@ -180,6 +185,7 @@ a{color:var(--ink)}
     <div class="howto" id="howto" hidden>
       <b>Add to your home screen</b>
       <ol id="howtoSteps"></ol>
+      <a class="start openapp" hidden target="_blank" rel="noopener"><span class="disp">Open app</span><small class="opensub"></small></a>
       <button class="ghost" id="howtoClose" type="button">Got it</button>
     </div>
     <ol class="list" id="list"></ol>
@@ -502,18 +508,40 @@ a{color:var(--ink)}
   function list(items){ return items.map(function(s){ return '<li>'+s+'</li>'; }).join(''); }
   var appMarked = false;
   // state: 'installing' (just accepted), 'installed' (finished), 'already' (installed on an earlier visit)
+  // After installing, an "Open app" link appears. It must open in a new tab
+  // (target=_blank): Chrome on Android then hands the address to Android, which
+  // opens the installed app over the browser. A same-tab link would stay in Chrome.
+  // Android needs a few seconds after install before the app can be opened.
+  var OPEN_DELAY = 10000;
+  var START_URL = new URL('./', location.href).href;
+  Array.prototype.forEach.call(document.querySelectorAll('.openapp'), function(a){ a.href = START_URL; });
+  function setOpen(stateClass, sub){
+    Array.prototype.forEach.call(document.querySelectorAll('.openapp'), function(a){
+      a.hidden = !stateClass;
+      a.classList.toggle('waiting', stateClass === 'waiting');
+      if(stateClass === 'waiting') a.setAttribute('aria-disabled', 'true'); else a.removeAttribute('aria-disabled');
+      a.querySelector('.opensub').textContent = sub || '';
+    });
+  }
+  // state: 'installing' (just accepted), 'installed' (finished), 'already' (installed on an earlier visit)
   function markInstalled(state){
     appMarked = true;
-    $('landDl').hidden = true; $('installBtn').hidden = true; $('howto').hidden = true;
+    $('landDl').hidden = true; $('installBtn').hidden = true;
     var msg = {
-      installing: ['Installing Stretches…', ['It’ll appear on your home screen in a moment.', 'Open it from there, or keep going here.']],
-      installed:  ['Installed', ['Stretches is on your home screen.', 'Open it from there, or keep going here.']],
-      already:    ['Already installed', ['Stretches is on your home screen.', 'Open it from there, or keep going here.']]
-    }[state] || null;
+      installing: ['Installing Stretches…', ['This takes a few seconds.']],
+      installed:  ['Installed', ['You’ll also find Stretches on your home screen or in your app drawer.']],
+      already:    ['Already installed', ['Open it below, or from your home screen or app drawer.']]
+    }[state];
     if(!msg) return;
-    $('landHowto').querySelector('b').textContent = msg[0];
-    $('landSteps').innerHTML = list(msg[1]);
+    [['landHowto','landSteps'], ['howto','howtoSteps']].forEach(function(ids){
+      $(ids[0]).querySelector('b').textContent = msg[0];
+      $(ids[1]).innerHTML = list(msg[1]);
+    });
     $('landHowto').hidden = false;
+    if(!$('home').hidden) $('howto').hidden = false;   // installed from the list page's button
+    if(state === 'already'){ setOpen('ready'); return; }
+    setOpen('waiting', 'Getting ready…');
+    if(state === 'installed') setTimeout(function(){ setOpen('ready'); }, OPEN_DELAY);
   }
   // The browser's install prompt can arrive a moment after the page loads,
   // so wait briefly for it before falling back to written steps.
@@ -583,7 +611,7 @@ a{color:var(--ink)}
       $('howto').hidden = false; $('installBtn').hidden = true;
     });
   });
-  $('howtoClose').addEventListener('click', function(){ $('howto').hidden = true; if(!installed) $('installBtn').hidden = false; });
+  $('howtoClose').addEventListener('click', function(){ $('howto').hidden = true; if(!installed && !appMarked) $('installBtn').hidden = false; });
 })();
 </script>
 
